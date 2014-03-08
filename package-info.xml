@@ -1,0 +1,37 @@
+<?xml version="1.0"?>
+<!DOCTYPE package-info SYSTEM "http://www.elkarte.net/site/package-info">
+<package-info xmlns="http://www.elkarte.net/site/package-info" xmlns:elk="http://www.elkarte.net/">
+	<id>Spuds:air_elk</id>
+	<name>Attachment Image Resize</name>
+	<version>1.0</version>
+	<type>modification</type>
+	<license><![CDATA[
+/**
+ * Attachment Image Resizing for ElkArte
+ *
+ * @author spuds
+ * @license MPL 1.1 http://mozilla.org/MPL/1.1/
+ *
+ * @version 1.0
+ */
+]]></license>
+	<install for="1.0 Beta - 1.0.99">
+		<readme parsebbc="true">readme.txt</readme>
+		<require-file name="languages/air_elk.english.php" destination="LANGUAGEDIR/english">The language strings</require-file>
+		<require-file name="sources/Air_Resize.subs.php" destination="SUBSDIR">Main processing files for AIR</require-file>
+		<hook hook="integrate_attachment_upload" file="SUBSDIR/Air_Resize.subs.php" function="iau_air_resize_images" />
+		<hook hook="integrate_modify_attachment_settings" file="SUBSDIR/Air_Resize.subs.php" function="imas_air_settings" />
+		<hook hook="integrate_post_before" file="SUBSDIR/Air_Resize.subs.php" function="ipb_air_prepost" />
+		<database>add_settings.php</database>
+		<redirect url="?action=admin;area=manageattachments;sa=attachments" timeout="5000">redirect.txt</redirect>
+	</install>
+	<uninstall for="1.0 Beta - 1.0.99">
+		<readme parsebbc="true">readme-uninstall.txt</readme>
+		<hook reverse="true" hook="integrate_attachment_upload" file="SUBSDIR/Air_Resize.subs.php" function="iau_air_resize_images" />
+		<hook reverse="true" hook="integrate_modify_attachment_settings" file="SUBSDIR/Air_Resize.subs.php" function="imas_air_settings" />
+		<hook reverse="true" hook="integrate_post_before" file="SUBSDIR/Air_Resize.subs.php" function="ipb_air_prepost" />
+		<remove-file name="LANGUAGEDIR/english/air_elk.english.php" />
+		<remove-file name="SUBSDIR/Air_Resize.subs.php" />
+		<redirect url="?action=admin;area=packages;sa=browse" timeout="5000" />
+	</uninstall>
+</package-info>
