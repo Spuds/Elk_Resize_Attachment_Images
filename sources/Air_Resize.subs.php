@@ -18,7 +18,7 @@ if (!defined('ELK'))
 /**
  * integrate_post_before
  *
- * @param type $function
+ * @param string $function_name
  */
 function ipb_air_prepost($function_name)
 {
@@ -43,7 +43,7 @@ function ipb_air_prepost($function_name)
 /**
  * integrate_modify_attachment_settings
  *
- * @param array $config_vars
+ * @param mixed[] $config_vars
  */
 function imas_air_settings(&$config_vars)
 {
@@ -171,7 +171,7 @@ class Attachment_Image_Resize
 	 * - Loads the current images information, most importantly its size and format
 	 * - Set the WxH bounds based on settings
 	 * - Forwards to the proper resizer (same or new format)
-	 * @param type $resize_only
+	 * @param boolean $resize_only
 	 */
 	public function resize($resize_only = true)
 	{
@@ -237,7 +237,7 @@ class Attachment_Image_Resize
 	/**
 	 * Executes the actual call to resizeImageFile to change an images WxH and format
 	 *
-	 * @param type $same_format it true will maintain the current image format
+	 * @param boolean $same_format it true will maintain the current image format
 	 */
 	public function air_resize($same_format = true)
 	{
@@ -273,7 +273,7 @@ class Attachment_Image_Resize
 		// Make the tracking updates
 		$_SESSION['temp_attachments'][$this->_attachID]['size'] = $new;
 
-		return $this->_air_reset_error($this->_attachID);
+		return $this->_air_reset_error();
 	}
 
 	/**
