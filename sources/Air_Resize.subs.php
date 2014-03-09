@@ -16,7 +16,9 @@ if (!defined('ELK'))
 	die('No access...');
 
 /**
- * integrate_post_before
+ * Called before entering the post controller, integrate_post_before
+ * Used to set up the post form to maximize the allowable file size so we can
+ * resize it / compress it.
  *
  * @param string $function_name
  */
@@ -28,7 +30,34 @@ function ipb_air_prepost($function_name)
 	if (!empty($modSettings['attachmentSizeLimit']) && !empty($modSettings['attachment_image_enabled']))
 	{
 		// Showing the post, or posting and producing attachment errors?
-		if ($function_name === 'action_index' || ($function_name === 'action_post2' && attachment_Error_Context::context()->hasErrors()))
+		if ($function_name === 'action_index')
+		{
+			// This is to allow the form to send us to larger files and then we can resize / shrink it.
+			// The size limit in the ACP is still honored, this just updates the form checks
+			$upload_max_filesize = ini_get('upload_max_filesize');
+			$upload_max_filesize = !empty($upload_max_filesize) ? memoryReturnBytes($upload_max_filesize) / 1024 : 0;
+
+			$modSettings['attachmentSizeLimit'] = $upload_max_filesize;
+		}
+	}
+}
+
+/**
+ * Called after the post controller runs, integrate_post_after
+ * Checks if the action was post2, a post attempt, and if so were attachment errors
+ * present.  If so again sets up the form to allow increase file size
+ *
+ * @param string $function_name
+ */
+function ipa_air_afterpost($function_name)
+{
+	global $modSettings;
+
+	// Make the post form accept any file size, or up to ini upload_max_filesize if its available
+	if (!empty($modSettings['attachmentSizeLimit']) && !empty($modSettings['attachment_image_enabled']))
+	{
+		// tried to post and produced some attachment errors?
+		if ($function_name === 'action_post2' && attachment_Error_Context::context()->hasErrors())
 		{
 			// This is to allow the form to send us to larger files and then we can resize / shrink it.
 			// The size limit in the ACP is still honored, this just updates the form checks
