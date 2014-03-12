@@ -307,8 +307,6 @@ class Attachment_Image_Resize
 
 	/**
 	 * Returns if the image's W or H dimension is over the set thresholds
-	 *
-	 * @param type $this->_size
 	 */
 	private function _air_validate_resize()
 	{
