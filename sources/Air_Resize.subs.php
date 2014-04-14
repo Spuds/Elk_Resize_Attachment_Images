@@ -33,7 +33,8 @@ function ipb_air_prepost($function_name)
 		if ($function_name === 'action_index')
 		{
 			// This is to allow the form to send us to larger files and then we can resize / shrink it.
-			// The size limit in the ACP is still honored, this just updates the form checks
+			// The size limit in the ACP is still honored, this just updates the form checks so its not rejected
+			// by the browser before we can work on it
 			$upload_max_filesize = ini_get('upload_max_filesize');
 			$upload_max_filesize = !empty($upload_max_filesize) ? memoryReturnBytes($upload_max_filesize) / 1024 : 0;
 
@@ -60,7 +61,8 @@ function ipa_air_afterpost($function_name)
 		if ($function_name === 'action_post2' && attachment_Error_Context::context()->hasErrors())
 		{
 			// This is to allow the form to send us to larger files and then we can resize / shrink it.
-			// The size limit in the ACP is still honored, this just updates the form checks
+			// The size limit in the ACP is still honored, this just updates the form checks so its not rejected
+			// by the browser before we can work on it
 			$upload_max_filesize = ini_get('upload_max_filesize');
 			$upload_max_filesize = !empty($upload_max_filesize) ? memoryReturnBytes($upload_max_filesize) / 1024 : 0;
 
@@ -70,7 +72,7 @@ function ipa_air_afterpost($function_name)
 }
 
 /**
- * integrate_modify_attachment_settings
+ * integrate_modify_attachment_settings Called from ManageAttachments.controller.php
  *
  * @param mixed[] $config_vars
  */
@@ -94,6 +96,7 @@ function imas_air_settings(&$config_vars)
  *
  * - integrate_attachment_upload, Called from attachments.subs.php
  * - Used to provide alternative upload processing
+ * @uses Attachment_Image_Resize
  */
 function iau_air_resize_images()
 {
@@ -322,8 +325,8 @@ class Attachment_Image_Resize
 	 * Checks if the new size "fits"
 	 *
 	 * What it does:
-	 * - validates its under the file size limits
-	 * - validates its under the total post size limits
+	 * - Validates its under the file size limits
+	 * - Validates its under the total post size limits
 	 */
 	private function _air_reset_error()
 	{
