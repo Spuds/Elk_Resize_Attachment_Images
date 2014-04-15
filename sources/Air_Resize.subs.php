@@ -16,7 +16,7 @@ if (!defined('ELK'))
 	die('No access...');
 
 /**
- * Called before entering the post controller, integrate_post_before
+ * Called before entering the post controller, integrate_action_post_before, call from Dispatcher.class
  * Used to set up the post form to maximize the allowable file size so we can
  * resize it / compress it.
  *
@@ -44,7 +44,7 @@ function ipb_air_prepost($function_name)
 }
 
 /**
- * Called after the post controller runs, integrate_post_after
+ * Called after the post controller runs, integrate_action_post_after, call from Dispatcher.class
  * Checks if the action was post2, a post attempt, and if so were attachment errors
  * present.  If so again sets up the form to allow increase file size
  *
@@ -78,13 +78,15 @@ function ipa_air_afterpost($function_name)
  */
 function imas_air_settings(&$config_vars)
 {
-	global $txt;
+	global $txt, $modSettings;
 
 	loadLanguage('air_elk');
 
+	$help = $txt['helpattachment_image_enabled'] . (!empty($modSettings['attachmentSizeLimit']) ? ' ' . sprintf($txt['helpattachment_image_enabled_size'], $modSettings['attachmentSizeLimit']) : '');
+
 	$config_vars = array_merge($config_vars, array(
 		array('title', 'attachment_image_resize'),
-			array('check', 'attachment_image_enabled'),
+			array('check', 'attachment_image_enabled', 'helptext' => $help),
 			array('check', 'attachment_image_reformat', 'helptext' => $txt['help_attachment_image_reformat']),
 			array('text', 'attachment_image_width', 'helptext' => $txt['help_attachment_image_width'], 'subtext' => $txt['attachment_image_sub'], 6, 'postinput' => $txt['attachment_image_post']),
 			array('text', 'attachment_image_height', 'helptext' => $txt['help_attachment_image_height'], 'subtext' => $txt['attachment_image_sub'], 6, 'postinput' => $txt['attachment_image_post']),
