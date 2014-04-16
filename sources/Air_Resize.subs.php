@@ -29,7 +29,7 @@ function ipb_air_prepost($function_name)
 	// Make the post form accept any file size, or up to ini upload_max_filesize if its available
 	if (!empty($modSettings['attachmentSizeLimit']) && !empty($modSettings['attachment_image_enabled']))
 	{
-		// Showing the post, or posting and producing attachment errors?
+		// Showing the post, or attempting to post?
 		if ($function_name === 'action_index')
 		{
 			// This is to allow the form to send us to larger files and then we can resize / shrink it.
@@ -38,6 +38,11 @@ function ipb_air_prepost($function_name)
 			$upload_max_filesize = ini_get('upload_max_filesize');
 			$upload_max_filesize = !empty($upload_max_filesize) ? memoryReturnBytes($upload_max_filesize) / 1024 : 0;
 
+			// Overall post limits, governed by post_max_size in ini if set.
+			$post_max_size = ini_get('post_max_size');
+			$post_max_size = !empty($post_max_size) ? memoryReturnBytes($post_max_size) / 1024 : 0;
+
+			$modSettings['attachmentPostLimit'] = $post_max_size;
 			$modSettings['attachmentSizeLimit'] = $upload_max_filesize;
 		}
 	}
@@ -57,15 +62,20 @@ function ipa_air_afterpost($function_name)
 	// Make the post form accept any file size, or up to ini upload_max_filesize if its available
 	if (!empty($modSettings['attachmentSizeLimit']) && !empty($modSettings['attachment_image_enabled']))
 	{
-		// tried to post and produced some attachment errors?
-		if ($function_name === 'action_post2' && attachment_Error_Context::context()->hasErrors())
+		// Tried to post and produced some attachment errors?
+		if ($function_name === 'action_post2' && Attachment_Error_Context::context()->hasErrors())
 		{
-			// This is to allow the form to send us to larger files and then we can resize / shrink it.
+			// This allows the form to send us larger files and then we can resize / shrink it.
 			// The size limit in the ACP is still honored, this just updates the form checks so its not rejected
 			// by the browser before we can work on it
 			$upload_max_filesize = ini_get('upload_max_filesize');
 			$upload_max_filesize = !empty($upload_max_filesize) ? memoryReturnBytes($upload_max_filesize) / 1024 : 0;
 
+			// The overall post size limits, governed by post_max_size in ini if set.
+			$post_max_size = ini_get('post_max_size');
+			$post_max_size = !empty($post_max_size) ? memoryReturnBytes($post_max_size) / 1024 : 0;
+
+			$modSettings['attachmentPostLimit'] = $post_max_size;
 			$modSettings['attachmentSizeLimit'] = $upload_max_filesize;
 		}
 	}
@@ -112,7 +122,7 @@ function iau_air_resize_images()
 	$air = new Attachment_Image_Resize();
 
 	// Load in the attachment errors, if there are any
-	$attach_errors = attachment_Error_Context::context();
+	$attach_errors = Attachment_Error_Context::context();
 
 	// Get the errors
 	if ($attach_errors->hasErrors())
@@ -277,13 +287,13 @@ class Attachment_Image_Resize
 	{
 		// Let try to resize this image
 		require_once(SUBSDIR . '/Graphics.subs.php');
-		$check = resizeImageFile($_SESSION['temp_attachments'][$this->_attachID]['tmp_name'], $_SESSION['temp_attachments'][$this->_attachID]['tmp_name'] . '.air.temp', $this->_size_bounds[0], $this->_size_bounds[1], $same_format ? $this->_size_current[2] : 2);
+		$check = resizeImageFile($_SESSION['temp_attachments'][$this->_attachID]['tmp_name'], $_SESSION['temp_attachments'][$this->_attachID]['tmp_name'] . 'airtemp', $this->_size_bounds[0], $this->_size_bounds[1], $same_format ? $this->_size_current[2] : 2);
 
-		// If sucessful, replace the uploaded image with the newly created one
+		// If successful, replace the uploaded image with the newly created one
 		if ($check)
 		{
 			@unlink($_SESSION['temp_attachments'][$this->_attachID]['tmp_name']);
-			rename($_SESSION['temp_attachments'][$this->_attachID]['tmp_name'] . '.air.temp', $_SESSION['temp_attachments'][$this->_attachID]['tmp_name']);
+			@rename($_SESSION['temp_attachments'][$this->_attachID]['tmp_name'] . 'airtemp', $_SESSION['temp_attachments'][$this->_attachID]['tmp_name']);
 
 			// Reload the file size
 			$check = $this->_air_update_size();
@@ -344,9 +354,13 @@ class Attachment_Image_Resize
 
 		// It fits so remove the error(s) against this file, and rerun the full scan
 		// To get here there can only be errors of type $this->_resize_errors
-		$attach_errors = attachment_Error_Context::context()->activate($this->_attachID);
-		foreach($this->_resize_errors as $error)
-			$attach_errors->removeError($error);
+		$attach_errors = Attachment_Error_Context::context();
+		$attach_errors->activate($this->_attachID);
+		if ($attach_errors->hasErrors($this->_attachID))
+		{
+			foreach($this->_resize_errors as $error)
+				$attach_errors->removeError($error);
+		}
 
 		// Now recheck this file
 		require_once(SUBSDIR . '/Attachments.subs.php');
