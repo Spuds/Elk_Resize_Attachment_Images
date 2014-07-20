@@ -15,7 +15,7 @@
  * @version 1.0
  */
 ]]></license>
-	<install for="1.0 Beta - 1.0.99">
+	<install for="1.0 RC1 - 1.0.99">
 		<readme parsebbc="true">readme.txt</readme>
 		<require-file name="languages/air_elk.english.php" destination="LANGUAGEDIR/english">The language strings</require-file>
 		<require-file name="sources/Air_Resize.subs.php" destination="SUBSDIR">Main processing files for AIR</require-file>
@@ -26,7 +26,7 @@
 		<database>add_settings.php</database>
 		<redirect url="?action=admin;area=manageattachments;sa=attachments" timeout="5000">redirect.txt</redirect>
 	</install>
-	<uninstall for="1.0 Beta - 1.0.99">
+	<uninstall for="1.0 RC1 - 1.0.99">
 		<readme parsebbc="true">readme-uninstall.txt</readme>
 		<hook reverse="true" hook="integrate_attachment_upload" file="SUBSDIR/Air_Resize.subs.php" function="iau_air_resize_images" />
 		<hook reverse="true" hook="integrate_modify_attachment_settings" file="SUBSDIR/Air_Resize.subs.php" function="imas_air_settings" />
