@@ -31,20 +31,7 @@ function ipb_air_prepost($function_name)
 	{
 		// Showing the post, or attempting to post?
 		if ($function_name === 'action_index')
-		{
-			// This is to allow the form to send us to larger files and then we can resize / shrink it.
-			// The size limit in the ACP is still honored, this just updates the form checks so its not rejected
-			// by the browser before we can work on it
-			$upload_max_filesize = ini_get('upload_max_filesize');
-			$upload_max_filesize = !empty($upload_max_filesize) ? memoryReturnBytes($upload_max_filesize) / 1024 : 0;
-
-			// Overall post limits, governed by post_max_size in ini if set.
-			$post_max_size = ini_get('post_max_size');
-			$post_max_size = !empty($post_max_size) ? memoryReturnBytes($post_max_size) / 1024 : 0;
-
-			$modSettings['attachmentPostLimit'] = $post_max_size;
-			$modSettings['attachmentSizeLimit'] = $upload_max_filesize;
-		}
+			air_setlimits();
 	}
 }
 
@@ -64,21 +51,28 @@ function ipa_air_afterpost($function_name)
 	{
 		// Tried to post and produced some attachment errors?
 		if ($function_name === 'action_post2' && Attachment_Error_Context::context()->hasErrors())
-		{
-			// This allows the form to send us larger files and then we can resize / shrink it.
-			// The size limit in the ACP is still honored, this just updates the form checks so its not rejected
-			// by the browser before we can work on it
-			$upload_max_filesize = ini_get('upload_max_filesize');
-			$upload_max_filesize = !empty($upload_max_filesize) ? memoryReturnBytes($upload_max_filesize) / 1024 : 0;
-
-			// The overall post size limits, governed by post_max_size in ini if set.
-			$post_max_size = ini_get('post_max_size');
-			$post_max_size = !empty($post_max_size) ? memoryReturnBytes($post_max_size) / 1024 : 0;
-
-			$modSettings['attachmentPostLimit'] = $post_max_size;
-			$modSettings['attachmentSizeLimit'] = $upload_max_filesize;
-		}
+			air_setlimits();
 	}
+}
+
+/**
+ * This allows the form to send us larger files and then we can resize / shrink it.
+ * The size limit in the ACP is still honored, this just updates the form checks so its not rejected
+ * by the browser before we can work on it
+ */
+function air_setlimits()
+{
+	// Max file size in a post based on upload_max_filesize
+	$upload_max_filesize = ini_get('upload_max_filesize');
+	$upload_max_filesize = !empty($upload_max_filesize) ? memoryReturnBytes($upload_max_filesize) / 1024 : 0;
+
+	// The overall post size limits, governed by post_max_size in ini if set.
+	$post_max_size = ini_get('post_max_size');
+	$post_max_size = !empty($post_max_size) ? memoryReturnBytes($post_max_size) / 1024 : 0;
+
+	// Set it
+	$modSettings['attachmentPostLimit'] = $post_max_size;
+	$modSettings['attachmentSizeLimit'] = $upload_max_filesize;
 }
 
 /**
