@@ -56,12 +56,18 @@ function ipa_air_afterpost($function_name)
 }
 
 /**
- * This allows the form to send us larger files and then we can resize / shrink it.
+ * This allows the form to send larger files which we will resize / shrink.
  * The size limit in the ACP is still honored, this just updates the form checks so its not rejected
  * by the browser before we can work on it
+ *
+ * Maximum file size is based on upload_max_filesize and total payload on post_max_size
+ * With D&D post_max_size is less important since its done one at a time vs all at once,
+ * still we set it.
  */
 function air_setlimits()
 {
+	global $modSettings;
+
 	// Max file size in a post based on upload_max_filesize
 	$upload_max_filesize = ini_get('upload_max_filesize');
 	$upload_max_filesize = !empty($upload_max_filesize) ? memoryReturnBytes($upload_max_filesize) / 1024 : 0;
@@ -102,6 +108,7 @@ function imas_air_settings(&$config_vars)
  *
  * - integrate_attachment_upload, Called from attachments.subs.php
  * - Used to provide alternative upload processing
+ *
  * @uses Attachment_Image_Resize
  */
 function iau_air_resize_images()
@@ -209,6 +216,7 @@ class Attachment_Image_Resize
 	 * - Loads the current images information, most importantly its size and format
 	 * - Set the WxH bounds based on settings
 	 * - Forwards to the proper resizer (same or new format)
+	 *
 	 * @param boolean $resize_only
 	 */
 	public function resize($resize_only = true)
@@ -257,7 +265,7 @@ class Attachment_Image_Resize
 		// Not over the WxH size limit, not a jpeg, and allowed to change formats (eg png->jpg)
 		elseif ($modSettings['attachment_image_reformat'] && !$this->_air_validate_resize())
 			$this->air_resize(false);
-		// Over the WxH size limit and allowed to reformat, two steps to try resize same format fist then change format
+		// Over the WxH size limit and allowed to reformat, two steps to try resize same format first then change format
 		elseif ($modSettings['attachment_image_reformat'] && $this->_air_validate_resize())
 		{
 			if (!$this->air_resize(true))
