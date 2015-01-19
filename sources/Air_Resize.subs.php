@@ -383,6 +383,7 @@ class Attachment_Image_Resize
 		// Sort out the errors for display and delete any associated files.
 		if (!empty($_SESSION['temp_attachments'][$this->_attachID]['errors']))
 		{
+			$attach_errors = Attachment_Error_Context::context();
 			$attach_errors->addAttach($this->_attachID, $_SESSION['temp_attachments'][$this->_attachID]['name']);
 
 			foreach ($_SESSION['temp_attachments'][$this->_attachID]['errors'] as $error)
