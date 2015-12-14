@@ -129,7 +129,7 @@ function iau_air_resize_images()
 	if ($attach_errors->hasErrors())
 		$errors = $attach_errors->prepareErrors();
 
-	// If there were generic errors duing the upload, we bail out
+	// If there were generic errors during the upload, we bail out
 	if (isset($errors['attach_generic']))
 		return;
 
@@ -225,6 +225,7 @@ class Attachment_Image_Resize
 
 		// Fetch the details for this attachment
 		$this->_size_current = @getimagesize($_SESSION['temp_attachments'][$this->_attachID]['tmp_name']);
+
 		if ($this->_size_current !== false)
 		{
 			// Bounds to use for constraining this image
@@ -284,6 +285,7 @@ class Attachment_Image_Resize
 	 * Executes the actual call to resizeImageFile to change an images WxH and format
 	 *
 	 * @param boolean $same_format it true will maintain the current image format
+	 * @return boolean
 	 */
 	public function air_resize($same_format = true)
 	{
@@ -367,6 +369,7 @@ class Attachment_Image_Resize
 		// Now recheck this file
 		require_once(SUBSDIR . '/Attachments.subs.php');
 		unset($_SESSION['temp_attachments'][$this->_attachID]['errors']);
+		$context['attachments']['quantity']--;
 		attachmentChecks($this->_attachID);
 
 		// Reload errors in case there are still some
