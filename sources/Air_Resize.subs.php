@@ -3,12 +3,12 @@
 /**
  * @package Attachment_Image_Resize Addon for Elkarte
  * @author Spuds
- * @copyright (c) 2011-2014 Spuds
+ * @copyright (c) 2011-2015 Spuds
  * @license This Source Code is subject to the terms of the Mozilla Public License
  * version 1.1 (the "License"). You can obtain a copy of the License at
  * http://mozilla.org/MPL/1.1/.
  *
- * @version 1.0
+ * @version 1.0.1
  *
  */
 
@@ -96,10 +96,10 @@ function imas_air_settings(&$config_vars)
 
 	$config_vars = array_merge($config_vars, array(
 		array('title', 'attachment_image_resize'),
-			array('check', 'attachment_image_enabled', 'helptext' => $help),
-			array('check', 'attachment_image_reformat', 'helptext' => $txt['help_attachment_image_reformat']),
-			array('text', 'attachment_image_width', 'helptext' => $txt['help_attachment_image_width'], 'subtext' => $txt['attachment_image_sub'], 6, 'postinput' => $txt['attachment_image_post']),
-			array('text', 'attachment_image_height', 'helptext' => $txt['help_attachment_image_height'], 'subtext' => $txt['attachment_image_sub'], 6, 'postinput' => $txt['attachment_image_post']),
+		array('check', 'attachment_image_enabled', 'helptext' => $help),
+		array('check', 'attachment_image_reformat', 'helptext' => $txt['help_attachment_image_reformat']),
+		array('text', 'attachment_image_width', 'helptext' => $txt['help_attachment_image_width'], 'subtext' => $txt['attachment_image_sub'], 6, 'postinput' => $txt['attachment_image_post']),
+		array('text', 'attachment_image_height', 'helptext' => $txt['help_attachment_image_height'], 'subtext' => $txt['attachment_image_sub'], 6, 'postinput' => $txt['attachment_image_post']),
 	));
 }
 
@@ -326,6 +326,8 @@ class Attachment_Image_Resize
 
 	/**
 	 * Returns if the image's W or H dimension is over the set thresholds
+	 *
+	 * @return boolean
 	 */
 	private function _air_validate_resize()
 	{
@@ -356,7 +358,7 @@ class Attachment_Image_Resize
 		if (!empty($modSettings['attachmentPostLimit']) && $context['attachments']['total_size'] + $_SESSION['temp_attachments'][$this->_attachID]['size'] > $modSettings['attachmentPostLimit'] * 1024)
 			return false;
 
-		// It fits so remove the error(s) against this file, and rerun the full scan
+		// It fits so remove any existing error(s) against this file, and rerun the full attachment scan
 		// To get here there can only be errors of type $this->_resize_errors
 		$attach_errors = Attachment_Error_Context::context();
 		$attach_errors->activate($this->_attachID);
