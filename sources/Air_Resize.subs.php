@@ -264,19 +264,14 @@ class Attachment_Image_Resize
 		elseif ($this->_air_validate_resize() && $this->_size_current[2] === 2)
 			$this->air_resize(true);
 		// Not over the WxH size limit, not a jpeg, and allowed to change formats (eg png->jpg)
-		elseif ($modSettings['attachment_image_reformat'] && !$this->_air_validate_resize())
+		elseif (!empty($modSettings['attachment_image_reformat']) && !$this->_air_validate_resize())
 			$this->air_resize(false);
 		// Over the WxH size limit and allowed to reformat, two steps to try resize same format first then change format
-		elseif ($modSettings['attachment_image_reformat'] && $this->_air_validate_resize())
+		elseif (!empty($modSettings['attachment_image_reformat']) && $this->_air_validate_resize())
 		{
 			if (!$this->air_resize(true))
 			{
-				if ($this->air_resize(false))
-				{
-					// Change the file name if it's not a .jpg
-					if (strrchr($_SESSION['temp_attachments'][$this->_attachID]['name'], '.') !== '.jpg')
-						$_SESSION['temp_attachments'][$this->_attachID]['name'] = substr($_SESSION['temp_attachments'][$this->_attachID]['name'], 0, -(strlen(strrchr($_SESSION['temp_attachments'][$this->_attachID]['name'], '.')))) . '.jpg';
-				}
+				$this->air_resize(false);
 			}
 		}
 	}
@@ -301,6 +296,13 @@ class Attachment_Image_Resize
 
 			// Reload the file size
 			$check = $this->_air_update_size();
+
+			// Change the file name and mime type if it's not a .jpg
+			if ($same_format === false && strrchr($_SESSION['temp_attachments'][$this->_attachID]['name'], '.') !== '.jpg')
+			{
+				$_SESSION['temp_attachments'][$this->_attachID]['name'] = substr($_SESSION['temp_attachments'][$this->_attachID]['name'], 0, -(strlen(strrchr($_SESSION['temp_attachments'][$this->_attachID]['name'], '.')))) . '.jpg';
+				$_SESSION['temp_attachments'][$this->_attachID]['type'] = 'image/jpeg';
+			}
 		}
 
 		return $check;
