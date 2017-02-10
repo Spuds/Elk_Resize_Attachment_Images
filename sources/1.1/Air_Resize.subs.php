@@ -362,7 +362,7 @@ class Attachment_Image_Resize
 
 		// It fits so remove any existing error(s) against this file, and rerun the full attachment scan
 		// To get here there can only be errors of type $this->_resize_errors
-		$attach_errors = AttachmentErrorContext::context();
+		$attach_errors = \ElkArte\Errors\AttachmentErrorContext::context();
 		$attach_errors->activate($this->_attachID);
 		if ($attach_errors->hasErrors($this->_attachID))
 		{
@@ -390,7 +390,7 @@ class Attachment_Image_Resize
 		// Sort out the errors for display and delete any associated files.
 		if (!empty($_SESSION['temp_attachments'][$this->_attachID]['errors']))
 		{
-			$attach_errors = AttachmentErrorContext::context();
+			$attach_errors = \ElkArte\Errors\AttachmentErrorContext::context();
 			$attach_errors->addAttach($this->_attachID, $_SESSION['temp_attachments'][$this->_attachID]['name']);
 
 			foreach ($_SESSION['temp_attachments'][$this->_attachID]['errors'] as $error)
