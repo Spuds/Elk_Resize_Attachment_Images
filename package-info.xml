@@ -3,7 +3,7 @@
 <package-info xmlns="http://www.elkarte.net/site/package-info" xmlns:elk="http://www.elkarte.net/">
 	<id>Spuds:air_elk</id>
 	<name>Attachment Image Resize</name>
-	<version>1.0.2</version>
+	<version>1.0.3</version>
 	<type>addon</type>
 	<license><![CDATA[
 /**
@@ -20,6 +20,7 @@
 		<license type="inline">This ElkArte addon is released under a MPL V1.1 license, a copy of it with its provisions is included with the package.</license>
 		<require-file name="languages/air_elk.english.php" destination="LANGUAGEDIR/english">The language strings</require-file>
 		<require-file name="languages/air_elk.french.php" destination="LANGUAGEDIR/french" />
+		<require-file name="languages/air_elk.german.php" destination="LANGUAGEDIR/german" />
 		<require-file name="sources/Air_Resize.subs.php" destination="SUBSDIR">Main processing files for AIR</require-file>
 		<hook hook="integrate_attachment_upload" file="SUBSDIR/Air_Resize.subs.php" function="iau_air_resize_images" />
 		<hook hook="integrate_modify_attachment_settings" file="SUBSDIR/Air_Resize.subs.php" function="imas_air_settings" />
@@ -27,7 +28,7 @@
 		<hook hook="integrate_action_post_after" file="SUBSDIR/Air_Resize.subs.php" function="ipa_air_afterpost" />
 
 		<database>add_settings.php</database>
-		<redirect url="?action=admin;area=manageattachments;sa=attachments" timeout="5000">redirect.txt</redirect>
+		<redirect url="?action=admin;area=manageattachments;sa=attachments" timeout="4000">redirect.txt</redirect>
 	</install>
 
 	<uninstall for="1.0 - 1.0.99">
@@ -38,8 +39,9 @@
 		<hook reverse="true" hook="integrate_action_post_after" file="SUBSDIR/Air_Resize.subs.php" function="ipa_air_afterpost" />
 		<remove-file name="LANGUAGEDIR/french/air_elk.french.php" />
 		<remove-file name="LANGUAGEDIR/english/air_elk.english.php" />
+		<remove-file name="LANGUAGEDIR/german/air_elk.german.php" />
 		<remove-file name="SUBSDIR/Air_Resize.subs.php" />
-		<redirect url="?action=admin;area=packages;sa=browse" timeout="5000" />
+		<redirect url="?action=admin;area=packages;sa=browse" timeout="4000" />
 	</uninstall>
 
 	<install for="1.1 RC1 - 1.1.99">
@@ -47,13 +49,14 @@
 		<license type="inline">This ElkArte addon is released under a MPL V1.1 license, a copy of it with its provisions is included with the package.</license>
 		<require-file name="languages/air_elk.english.php" destination="LANGUAGEDIR/english">The language strings</require-file>
 		<require-file name="languages/air_elk.french.php" destination="LANGUAGEDIR/french" />
+		<require-file name="languages/air_elk.german.php" destination="LANGUAGEDIR/german" />
 		<require-file name="sources/1.1/Air_Resize.subs.php" destination="SUBSDIR">Main processing files for AIR</require-file>
 		<hook hook="integrate_attachment_upload" file="SUBSDIR/Air_Resize.subs.php" function="iau_air_resize_images" />
 		<hook hook="integrate_modify_attachment_settings" file="SUBSDIR/Air_Resize.subs.php" function="imas_air_settings" />
 		<hook hook="integrate_action_post_before" file="SUBSDIR/Air_Resize.subs.php" function="ipb_air_prepost" />
 		<hook hook="integrate_action_post_after" file="SUBSDIR/Air_Resize.subs.php" function="ipa_air_afterpost" />
 		<database>add_settings.php</database>
-		<redirect url="?action=admin;area=manageattachments;sa=attachments" timeout="5000">redirect.txt</redirect>
+		<redirect url="?action=admin;area=manageattachments;sa=attachments" timeout="4000">redirect.txt</redirect>
 	</install>
 
 	<uninstall for="1.1 RC1 - 1.1.99">
@@ -64,7 +67,8 @@
 		<hook reverse="true" hook="integrate_action_post_after" file="SUBSDIR/Air_Resize.subs.php" function="ipa_air_afterpost" />
 		<remove-file name="LANGUAGEDIR/french/air_elk.french.php" />
 		<remove-file name="LANGUAGEDIR/english/air_elk.english.php" />
+		<remove-file name="LANGUAGEDIR/german/air_elk.german.php" />
 		<remove-file name="SUBSDIR/Air_Resize.subs.php" />
-		<redirect url="?action=admin;area=packages;sa=browse" timeout="5000" />
+		<redirect url="?action=admin;area=packages;sa=browse" timeout="4000" />
 	</uninstall>
 </package-info>
