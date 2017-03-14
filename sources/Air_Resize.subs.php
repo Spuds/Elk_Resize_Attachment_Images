@@ -8,7 +8,7 @@
  * version 1.1 (the "License"). You can obtain a copy of the License at
  * http://mozilla.org/MPL/1.1/.
  *
- * @version 1.0.2
+ * @version 1.0.3
  *
  */
 
@@ -30,7 +30,7 @@ function ipb_air_prepost($function_name)
 	if (!empty($modSettings['attachmentSizeLimit']) && !empty($modSettings['attachment_image_enabled']))
 	{
 		// Showing the post, or attempting to post?
-		if ($function_name === 'action_index')
+		if ($function_name === 'action_index' || $function_name === 'action_post2')
 			air_setlimits();
 	}
 }
