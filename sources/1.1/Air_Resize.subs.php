@@ -8,12 +8,14 @@
  * version 1.1 (the "License"). You can obtain a copy of the License at
  * http://mozilla.org/MPL/1.1/.
  *
- * @version 1.0.3
+ * @version 1.0.4
  *
  */
 
 if (!defined('ELK'))
+{
 	die('No access...');
+}
 
 /**
  * Called before entering the post controller, integrate_action_post_before, call from Dispatcher.class
@@ -31,7 +33,9 @@ function ipb_air_prepost($function_name)
 	{
 		// Showing the post, or attempting to post?
 		if ($function_name === 'action_index' || $function_name === 'action_post2')
+		{
 			air_setlimits();
+		}
 	}
 }
 
@@ -51,7 +55,9 @@ function ipa_air_afterpost($function_name)
 	{
 		// Tried to post and produced some attachment errors?
 		if ($function_name === 'action_post2' && \ElkArte\Errors\AttachmentErrorContext::context()->hasErrors())
+		{
 			air_setlimits();
+		}
 	}
 }
 
@@ -106,6 +112,8 @@ function imas_air_settings(&$config_vars)
 /**
  *  iau_resize_images()
  *
+ * What it does:
+ *
  * - integrate_attachment_upload, Called from attachments.subs.php
  * - Used to provide alternative upload processing
  *
@@ -117,7 +125,9 @@ function iau_air_resize_images()
 
 	// If its off, just return
 	if (empty($modSettings['attachment_image_enabled']))
+	{
 		return;
+	}
 
 	// Set up
 	$air = new Attachment_Image_Resize();
@@ -127,11 +137,15 @@ function iau_air_resize_images()
 
 	// Get the errors
 	if ($attach_errors->hasErrors())
+	{
 		$errors = $attach_errors->prepareErrors();
+	}
 
 	// If there were generic errors during the upload, we bail out
 	if (isset($errors['attach_generic']))
+	{
 		return;
+	}
 
 	// Good to process
 	$air->init();
@@ -144,24 +158,28 @@ class Attachment_Image_Resize
 {
 	/**
 	 * Holds the current image size / type values
+	 *
 	 * @var mixed[]
 	 */
 	protected $_size_current;
 
 	/**
 	 * Holds the WxH bounds an image must be within
+	 *
 	 * @var int[]
 	 */
 	protected $_size_bounds;
 
 	/**
 	 * The id of the $_SESSION attachment we are working on
+	 *
 	 * @var int
 	 */
 	protected $_attachID;
 
 	/**
 	 * Holds the errors we will try to work around
+	 *
 	 * @var string[]
 	 */
 	protected $_resize_errors = array('file_too_big', 'attach_max_total_file_size');
@@ -170,6 +188,7 @@ class Attachment_Image_Resize
 	 * Looks at each attachment in $_SESSION and determines which can be worked on
 	 *
 	 * What it does:
+	 *
 	 * - If generic errors were found, exits
 	 * - If attachment specific errors are found other than size related, the attachment is skipped
 	 * - If size related issues are found, will forward to the resize, new format function.
@@ -178,15 +197,21 @@ class Attachment_Image_Resize
 	 */
 	public function init()
 	{
+		global $modSettings;
+
 		// Loop through all of the attachments
 		foreach ($_SESSION['temp_attachments'] as $this->_attachID => $attachment)
 		{
 			if ($this->_attachID === 'post')
+			{
 				continue;
+			}
 
 			// No errors for this file, lets just resize (if needed) while keeping its format
 			if (empty($attachment['errors']))
+			{
 				$this->resize(true);
+			}
 			// Errors associated with the file, if they are size related, lets see if we can help
 			else
 			{
@@ -204,7 +229,19 @@ class Attachment_Image_Resize
 
 				// OK lets see if we can fix this file
 				if ($other === false)
+				{
+					// Rotation is bypassed on errors during normal Elk processing
+					if (!empty($modSettings['attachment_autorotate']) && substr($_SESSION['temp_attachments'][$this->_attachID]['type'], 0, 5) === 'image')
+					{
+						// exif data may be stripped by resize operations, so do this first.
+						if (function_exists('autoRotateImage'))
+						{
+							autoRotateImage($_SESSION['temp_attachments'][$this->_attachID]['tmp_name']);
+						}
+					}
+
 					$this->resize(false);
+				}
 			}
 		}
 	}
@@ -213,6 +250,7 @@ class Attachment_Image_Resize
 	 * Sets the WxH bounds for an image and prepares for the resize call
 	 *
 	 * What it does:
+	 *
 	 * - Loads the current images information, most importantly its size and format
 	 * - Set the WxH bounds based on settings
 	 * - Forwards to the proper resizer (same or new format)
@@ -234,10 +272,14 @@ class Attachment_Image_Resize
 
 			// Attempt to resize (if needed), maintaining the format
 			if ($resize_only)
+			{
 				$this->air_resize(true);
+			}
 			// Attempt to resize, change the format only if needed
 			else
+			{
 				$this->air_resize_new_format();
+			}
 		}
 	}
 
@@ -246,12 +288,13 @@ class Attachment_Image_Resize
 	 * the file size, maintaining the current format if possible.
 	 *
 	 * What it does:
+	 *
 	 * - Under the WxH limits and already a jpeg, simply returns
 	 * - Over the WxH limits and a jpeg, resizes with same format
 	 * - Under the WxH limits and not a jpeg, resize changing to a jpeg
 	 * - Over the WxH limits and not a jpeg, first resize keeping format
-	 *		- if it achieves file size limits, done
-	 *		- if not attempt to resize and change format to jpeg
+	 *    - if it achieves file size limits, done
+	 *    - if not attempt to resize and change format to jpeg
 	 */
 	public function air_resize_new_format()
 	{
@@ -259,13 +302,19 @@ class Attachment_Image_Resize
 
 		// Not over the WxH size limit and already a jpeg, nothing we can try, its broke (sure jack around with quality)
 		if (!$this->_air_validate_resize() && $this->_size_current[2] === 2)
+		{
 			return;
+		}
 		// Over the WxH size limit and already a jpeg, try resize
 		elseif ($this->_air_validate_resize() && $this->_size_current[2] === 2)
+		{
 			$this->air_resize(true);
+		}
 		// Not over the WxH size limit, not a jpeg, and allowed to change formats (eg png->jpg)
 		elseif (!empty($modSettings['attachment_image_reformat']) && !$this->_air_validate_resize())
+		{
 			$this->air_resize(false);
+		}
 		// Over the WxH size limit and allowed to reformat, two steps to try resize same format first then change format
 		elseif (!empty($modSettings['attachment_image_reformat']) && $this->_air_validate_resize())
 		{
@@ -312,6 +361,7 @@ class Attachment_Image_Resize
 	 * Updates the $_SESSION attachment file array with its new size
 	 *
 	 * What it does:
+	 *
 	 * - Updates the total size of the posting
 	 * - Calls air_reset_error to remove any errors that were fixed, if any
 	 */
@@ -338,13 +388,14 @@ class Attachment_Image_Resize
 		$width = !empty($modSettings['attachment_image_width']) && $this->_size_current[0] > $modSettings['attachment_image_width'];
 		$height = !empty($modSettings['attachment_image_height']) && $this->_size_current[1] > $modSettings['attachment_image_height'];
 
-		return($width || $height);
+		return ($width || $height);
 	}
 
 	/**
 	 * Checks if the new size "fits"
 	 *
 	 * What it does:
+	 *
 	 * - Validates its under the file size limits
 	 * - Validates its under the total post size limits
 	 */
@@ -354,11 +405,15 @@ class Attachment_Image_Resize
 
 		// Is the file now within file size limits?
 		if (!empty($modSettings['attachmentSizeLimit']) && $_SESSION['temp_attachments'][$this->_attachID]['size'] > $modSettings['attachmentSizeLimit'] * 1024)
+		{
 			return false;
+		}
 
 		// Is the file now withing post size limits?
 		if (!empty($modSettings['attachmentPostLimit']) && $context['attachments']['total_size'] + $_SESSION['temp_attachments'][$this->_attachID]['size'] > $modSettings['attachmentPostLimit'] * 1024)
+		{
 			return false;
+		}
 
 		// It fits so remove any existing error(s) against this file, and rerun the full attachment scan
 		// To get here there can only be errors of type $this->_resize_errors
@@ -366,8 +421,10 @@ class Attachment_Image_Resize
 		$attach_errors->activate($this->_attachID);
 		if ($attach_errors->hasErrors($this->_attachID))
 		{
-			foreach($this->_resize_errors as $error)
+			foreach ($this->_resize_errors as $error)
+			{
 				$attach_errors->removeError($error);
+			}
 		}
 
 		// Now recheck this file
@@ -396,9 +453,13 @@ class Attachment_Image_Resize
 			foreach ($_SESSION['temp_attachments'][$this->_attachID]['errors'] as $error)
 			{
 				if (!is_array($error))
+				{
 					$attach_errors->addError($error);
+				}
 				else
+				{
 					$attach_errors->addError(array($error[0], $error[1]));
+				}
 			}
 		}
 	}
