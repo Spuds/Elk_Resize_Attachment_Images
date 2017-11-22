@@ -44,7 +44,7 @@
 		<redirect url="?action=admin;area=packages;sa=browse" timeout="4000" />
 	</uninstall>
 
-	<install for="1.1 RC1 - 1.1.99">
+	<install for="1.1 - 1.1.99">
 		<readme parsebbc="true">readme.txt</readme>
 		<license type="inline">This ElkArte addon is released under a MPL V1.1 license, a copy of it with its provisions is included with the package.</license>
 		<require-file name="languages/air_elk.english.php" destination="LANGUAGEDIR/english">The language strings</require-file>
@@ -59,7 +59,7 @@
 		<redirect url="?action=admin;area=manageattachments;sa=attachments" timeout="4000">redirect.txt</redirect>
 	</install>
 
-	<uninstall for="1.1 RC1 - 1.1.99">
+	<uninstall for="1.1 - 1.1.99">
 		<readme parsebbc="true">readme-uninstall.txt</readme>
 		<hook reverse="true" hook="integrate_attachment_upload" file="SUBSDIR/Air_Resize.subs.php" function="iau_air_resize_images" />
 		<hook reverse="true" hook="integrate_modify_attachment_settings" file="SUBSDIR/Air_Resize.subs.php" function="imas_air_settings" />

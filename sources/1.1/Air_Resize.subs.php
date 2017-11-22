@@ -8,7 +8,7 @@
  * version 1.1 (the "License"). You can obtain a copy of the License at
  * http://mozilla.org/MPL/1.1/.
  *
- * @version 1.0.4
+ * @version 1.0.5
  *
  */
 
@@ -335,12 +335,13 @@ class Attachment_Image_Resize
 	{
 		// Let try to resize this image
 		require_once(SUBSDIR . '/Graphics.subs.php');
-		$check = resizeImageFile($_SESSION['temp_attachments'][$this->_attachID]['tmp_name'], $_SESSION['temp_attachments'][$this->_attachID]['tmp_name'] . 'airtemp', $this->_size_bounds[0], $this->_size_bounds[1], $same_format ? $this->_size_current[2] : 2);
+		$check = resizeImageFile($_SESSION['temp_attachments'][$this->_attachID]['tmp_name'], $_SESSION['temp_attachments'][$this->_attachID]['tmp_name'] . 'airtemp', $this->_size_bounds[0], $this->_size_bounds[1], ($same_format ? $this->_size_current[2] : 2), true);
 
 		// If successful, replace the uploaded image with the newly created one
 		if ($check)
 		{
 			@unlink($_SESSION['temp_attachments'][$this->_attachID]['tmp_name']);
+			@unlink($_SESSION['temp_attachments'][$this->_attachID]['tmp_name'] . '_thumb');
 			@rename($_SESSION['temp_attachments'][$this->_attachID]['tmp_name'] . 'airtemp', $_SESSION['temp_attachments'][$this->_attachID]['tmp_name']);
 
 			// Reload the file size
