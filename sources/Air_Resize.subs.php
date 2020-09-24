@@ -3,12 +3,12 @@
 /**
  * @package Attachment_Image_Resize Addon for Elkarte
  * @author Spuds
- * @copyright (c) 2011-2015 Spuds
+ * @copyright (c) 2011-2020 Spuds
  * @license This Source Code is subject to the terms of the Mozilla Public License
  * version 1.1 (the "License"). You can obtain a copy of the License at
  * http://mozilla.org/MPL/1.1/.
  *
- * @version 1.0.4
+ * @version 1.0.6
  *
  */
 
@@ -266,19 +266,27 @@ class Attachment_Image_Resize
 
 		if ($this->_size_current !== false)
 		{
+			// Going to need help
+			require_once (SUBSDIR . '/Graphics.subs.php');
+
 			// Bounds to use for constraining this image
 			$this->_size_bounds[0] = empty($modSettings['attachment_image_width']) ? $this->_size_current[0] : min($this->_size_current[0], $modSettings['attachment_image_width']);
 			$this->_size_bounds[1] = empty($modSettings['attachment_image_height']) ? $this->_size_current[1] : min($this->_size_current[1], $modSettings['attachment_image_height']);
 
+			// Is a PNG -AND- we allow format changes -AND- it has no alpha channel DNA
+			$force_reformat = $this->_size_current[2] === 3
+			&& !empty($modSettings['attachment_image_reformat'])
+			&& !$this->_check_transparency();
+
 			// Attempt to resize (if needed), maintaining the format
 			if ($resize_only)
 			{
-				$this->air_resize(true);
+				$this->air_resize($force_reformat ? false : true);
 			}
 			// Attempt to resize, change the format only if needed
 			else
 			{
-				$this->air_resize_new_format();
+				$this->air_resize_new_format(force_reformat);
 			}
 		}
 	}
@@ -295,8 +303,10 @@ class Attachment_Image_Resize
 	 * - Over the WxH limits and not a jpeg, first resize keeping format
 	 *    - if it achieves file size limits, done
 	 *    - if not attempt to resize and change format to jpeg
+	 *
+	 * @param boolean $force_reformat if set will always convert PNG to JPG
 	 */
-	public function air_resize_new_format()
+	public function air_resize_new_format($force_reformat = false)
 	{
 		global $modSettings;
 
@@ -305,8 +315,9 @@ class Attachment_Image_Resize
 		{
 			return;
 		}
+
 		// Over the WxH size limit and already a jpeg, try resize
-		elseif ($this->_air_validate_resize() && $this->_size_current[2] === 2)
+		if ($this->_air_validate_resize() && $this->_size_current[2] === 2)
 		{
 			$this->air_resize(true);
 		}
@@ -318,6 +329,13 @@ class Attachment_Image_Resize
 		// Over the WxH size limit and allowed to reformat, two steps to try resize same format first then change format
 		elseif (!empty($modSettings['attachment_image_reformat']) && $this->_air_validate_resize())
 		{
+			if ($force_reformat)
+			{
+				$this->air_resize(false);
+
+				return;
+			}
+
 			if (!$this->air_resize(true))
 			{
 				$this->air_resize(false);
@@ -334,7 +352,6 @@ class Attachment_Image_Resize
 	public function air_resize($same_format = true)
 	{
 		// Let try to resize this image
-		require_once(SUBSDIR . '/Graphics.subs.php');
 		$check = resizeImageFile($_SESSION['temp_attachments'][$this->_attachID]['tmp_name'], $_SESSION['temp_attachments'][$this->_attachID]['tmp_name'] . 'airtemp', $this->_size_bounds[0], $this->_size_bounds[1], $same_format ? $this->_size_current[2] : 2);
 
 		// If successful, replace the uploaded image with the newly created one
@@ -428,7 +445,7 @@ class Attachment_Image_Resize
 		}
 
 		// Now recheck this file
-		require_once(SUBSDIR . '/Attachments.subs.php');
+		require_once (SUBSDIR . '/Attachments.subs.php');
 		unset($_SESSION['temp_attachments'][$this->_attachID]['errors']);
 		$context['attachments']['quantity']--;
 		attachmentChecks($this->_attachID);
@@ -462,5 +479,104 @@ class Attachment_Image_Resize
 				}
 			}
 		}
+	}
+
+	/**
+	 * Checks for transparency in a PNG image
+	 *
+	 *  - Checks file header to see if its been saved with Alpha space
+	 *  - 8 Bit (256 color) PNG's are not handled.
+	 *  - If the alpha flag is set, will go pixel by pixel to validate if any alpha
+	 * pixels exist before returning true.
+	 *
+	 * @return bool
+	 */
+	private function _check_transparency()
+	{
+		// It claims to be, but we need to do pixel inspection :'(
+		if (ord(file_get_contents($_SESSION['temp_attachments'][$this->_attachID]['tmp_name'], false, null, 25, 1)) & 4)
+		{
+			if (checkImagick())
+			{
+				return $this->_check_transparency_IM();
+			}
+
+			if (checkGD())
+			{
+				return $this->_check_transparency_GD();
+			}
+		}
+
+		return false;
+	}
+
+	/**
+	 * Validate PNG transparency the Imagick way
+	 *
+	 * @return bool
+	 */
+	private function _check_transparency_IM()
+	{
+		$trans = false;
+		try
+		{
+			$image = new Imagick($_SESSION['temp_attachments'][$this->_attachID]['tmp_name']);
+			$pixel_iterator = $image->getPixelIterator();
+
+			// Look at each one, or until we find just one
+			foreach ($pixel_iterator as $y => $pixels)
+			{
+				foreach ($pixels as $x => $pixel)
+				{
+					$color = $pixel->getColor();
+					if ($color['a'] < 1)
+					{
+						$trans = true;
+						break 2;
+					}
+				}
+			}
+		}
+		catch (Exception $e)
+		{
+			// We don't know what it is, so don't mess with it
+			$trans = true;
+		}
+
+		unset($image);
+
+		return $trans;
+	}
+
+	/**
+	 * Validate PNG transparency the GD way
+	 *
+	 * @return bool
+	 */
+	private function _check_transparency_GD()
+	{
+		$trans = false;
+		$image = imagecreatefrompng($_SESSION['temp_attachments'][$this->_attachID]['tmp_name']);
+		if (!is_resource($image))
+		{
+			return true;
+		}
+
+		// Go through the image pixel by pixel and as soon as we find a transparent pixel
+		for ($i = 0; $i < $this->_size_current[0]; $i++)
+		{
+			for ($j = 0; $j < $this->_size_current[1]; $j++)
+			{
+				if (imagecolorat($image, $i, $j) & 0x7F000000)
+				{
+					$trans = true;
+					break 2;
+				}
+			}
+		}
+
+		unset($image);
+
+		return $trans;
 	}
 }
