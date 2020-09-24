@@ -5,7 +5,7 @@
 o This ElkArte Addon is subject to the terms of the Mozilla Public License version 1.1 (the "License"). You can obtain a copy of the License at http://mozilla.org/MPL/1.1/
 
 [color=blue][b][size=12pt][u]Introduction[/u][/size][/b][/color]
-Automatically resizes attached images that are larger than a defined  width X height bounding or those that are larger than the allowed maximum size KB.
+Automatically resizes attached images that are larger than a defined width X height bounding box or any that are larger than the allowed maximum size KB.
 
 Will resize attachment imagess (.jpg, .png, .gif, or .bmp) to fit within the bounds specified.  The image format will be maintained unless it is unable to fit the resized image within the max allowed file size specified.  In this case, if the optional change format is enabled, the system will convert the image to JPEG for better compression.
 

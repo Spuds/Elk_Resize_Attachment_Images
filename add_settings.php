@@ -28,4 +28,4 @@ foreach ($add_settings as $new_setting => $new_value)
 }
 
 if (ELK === 'SSI')
-   echo 'Congratulations! You have successfully installed this modification!';
+   echo 'Congratulations! You have successfully installed this addon!';
