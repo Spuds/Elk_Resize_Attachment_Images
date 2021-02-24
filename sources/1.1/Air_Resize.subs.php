@@ -211,7 +211,7 @@ class Attachment_Image_Resize
 			// No errors for this file, lets just resize (if needed) while keeping its format
 			if (empty($attachment['errors']))
 			{
-				$this->resize(true);
+				$this->resize();
 			}
 			// Errors associated with the file, if they are size related, lets see if we can help
 			else
@@ -320,7 +320,7 @@ class Attachment_Image_Resize
 		// Over the WxH size limit and already a jpeg, try resize
 		if ($this->_air_validate_resize() && $this->_size_current[2] === 2)
 		{
-			$this->air_resize(true);
+			$this->air_resize();
 		}
 		// Not over the WxH size limit, not a jpeg, and allowed to change formats (eg png->jpg)
 		elseif (!empty($modSettings['attachment_image_reformat']) && !$this->_air_validate_resize())
@@ -337,7 +337,7 @@ class Attachment_Image_Resize
 				return;
 			}
 
-			if (!$this->air_resize(true))
+			if (!$this->air_resize())
 			{
 				$this->air_resize(false);
 			}
