@@ -3,7 +3,7 @@
 /**
  * @package Attachment_Image_Resize Addon for Elkarte
  * @author Spuds
- * @copyright (c) 2011-2020 Spuds
+ * @copyright (c) 2011-2021 Spuds
  * @license This Source Code is subject to the terms of the Mozilla Public License
  * version 1.1 (the "License"). You can obtain a copy of the License at
  * http://mozilla.org/MPL/1.1/.
@@ -87,7 +87,7 @@ function air_setlimits()
 /**
  * integrate_modify_attachment_settings Called from ManageAttachments.controller.php
  *
- * @param mixed[] $config_vars
+ * @param array $config_vars
  */
 function imas_air_settings(&$config_vars)
 {
@@ -160,7 +160,7 @@ class Attachment_Image_Resize
 	/**
 	 * Holds the current image size / type values
 	 *
-	 * @var mixed[]
+	 * @var array
 	 */
 	protected $_size_current;
 
@@ -276,13 +276,13 @@ class Attachment_Image_Resize
 
 			// Is a PNG -AND- we allow format changes -AND- it has no alpha channel DNA
 			$force_reformat = $this->_size_current[2] === 3
-			&& !empty($modSettings['attachment_image_reformat'])
-			&& !$this->_check_transparency();
+				&& !empty($modSettings['attachment_image_reformat'])
+				&& !$this->_check_transparency();
 
 			// Attempt to resize (if needed), maintaining the format
 			if ($resize_only)
 			{
-				$this->air_resize($force_reformat ? false : true);
+				$this->air_resize(!$force_reformat);
 			}
 			// Attempt to resize, change the format only if needed or forced
 			else
@@ -311,7 +311,8 @@ class Attachment_Image_Resize
 	{
 		global $modSettings;
 
-		// Not over the WxH size limit and already a jpeg, nothing we can try, its broke (sure jack around with quality)
+		// Not over the WxH size limit and already a jpeg, nothing we can try,
+		// its broke (sure jack around with quality)
 		if (!$this->_air_validate_resize() && $this->_size_current[2] === 2)
 		{
 			return;
@@ -327,7 +328,8 @@ class Attachment_Image_Resize
 		{
 			$this->air_resize(false);
 		}
-		// Over the WxH size limit and allowed to reformat, two steps to try resize same format first then change format
+		// Over the WxH size limit and allowed to reformat, two steps to try resize same
+		// format first then change format
 		elseif (!empty($modSettings['attachment_image_reformat']) && $this->_air_validate_resize())
 		{
 			if ($force_reformat)

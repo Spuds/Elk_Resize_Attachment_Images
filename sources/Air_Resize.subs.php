@@ -3,7 +3,7 @@
 /**
  * @package Attachment_Image_Resize Addon for Elkarte
  * @author Spuds
- * @copyright (c) 2011-2020 Spuds
+ * @copyright (c) 2011-2021 Spuds
  * @license This Source Code is subject to the terms of the Mozilla Public License
  * version 1.1 (the "License"). You can obtain a copy of the License at
  * http://mozilla.org/MPL/1.1/.
@@ -90,7 +90,7 @@ function air_setlimits()
 /**
  * integrate_modify_attachment_settings Called from ManageAttachments.controller.php
  *
- * @param mixed[] $config_vars
+ * @param array $config_vars
  */
 function imas_air_settings(&$config_vars)
 {
@@ -156,32 +156,16 @@ function iau_air_resize_images()
  */
 class Attachment_Image_Resize
 {
-	/**
-	 * Holds the current image size / type values
-	 *
-	 * @var mixed[]
-	 */
+	/** @var array Holds the current image size / type values */
 	protected $_size_current;
 
-	/**
-	 * Holds the WxH bounds an image must be within
-	 *
-	 * @var int[]
-	 */
+	/** @var int[] Holds the WxH bounds an image must be within */
 	protected $_size_bounds;
 
-	/**
-	 * The id of the $_SESSION attachment we are working on
-	 *
-	 * @var int
-	 */
+	/** @var int|string The id of the $_SESSION attachment we are working on */
 	protected $_attachID;
 
-	/**
-	 * Holds the errors we will try to work around
-	 *
-	 * @var string[]
-	 */
+	/** @var string[] Holds the errors we will try to work around */
 	protected $_resize_errors = array('file_too_big', 'attach_max_total_file_size');
 
 	/**
@@ -281,7 +265,7 @@ class Attachment_Image_Resize
 			// Attempt to resize (if needed), maintaining the format
 			if ($resize_only)
 			{
-				$this->air_resize($force_reformat ? false : true);
+				$this->air_resize(!$force_reformat);
 			}
 			// Attempt to resize, change the format only if needed
 			else
