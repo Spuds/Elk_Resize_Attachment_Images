@@ -3,20 +3,20 @@
 /**
  * @package Attachment_Image_Resize Addon for Elkarte
  * @author Spuds
- * @copyright (c) 2011-2021 Spuds
+ * @copyright (c) 2011-2022 Spuds
  * @license This Source Code is subject to the terms of the Mozilla Public License
  * version 1.1 (the "License"). You can obtain a copy of the License at
  * http://mozilla.org/MPL/1.1/.
  *
- * @version 1.0.6
+ * @version 1.0.7
  *
  */
 
 use ElkArte\Errors\AttachmentErrorContext;
 
 /**
- * Called before entering the post controller, integrate_action_post_before, call from Dispatcher.class
- * Used to set up the post form to maximize the allowable file size so we can
+ * Called before entering the post controller, integrate_action_post_before, called from Dispatcher.class
+ * Used to set up the post form to maximize the allowable server file size, so we can
  * resize it / compress it.
  *
  * @param string $function_name
@@ -25,7 +25,7 @@ function ipb_air_prepost($function_name)
 {
 	global $modSettings;
 
-	// Make the post form accept any file size, or up to ini upload_max_filesize if its available
+	// Make the post form accept any file size, or up to ini upload_max_filesize if it's available
 	if (!empty($modSettings['attachmentSizeLimit']) && !empty($modSettings['attachment_image_enabled']))
 	{
 		// Creating the post, or submitting the post
@@ -47,24 +47,24 @@ function ipa_air_afterpost($function_name)
 {
 	global $modSettings;
 
-	// Make the post form accept any file size, or up to ini upload_max_filesize if its available
-	if (!empty($modSettings['attachmentSizeLimit']) && !empty($modSettings['attachment_image_enabled']))
+	// Make the post form accept any file size, or up to ini upload_max_filesize if available
+	// Tried to post and produced some attachment errors?
+	if (!empty($modSettings['attachmentSizeLimit'])
+		&& !empty($modSettings['attachment_image_enabled'])
+		&& $function_name === 'action_post2'
+		&& AttachmentErrorContext::context()->hasErrors())
 	{
-		// Tried to post and produced some attachment errors?
-		if ($function_name === 'action_post2' && AttachmentErrorContext::context()->hasErrors())
-		{
-			air_setlimits();
-		}
+		air_setlimits();
 	}
 }
 
 /**
  * This allows the form to send larger files which we will resize / shrink.
- * The size limit in the ACP is still honored, this just updates the form checks so its not rejected
+ * The size limit in the ACP is still honored, this just updates the form checks, so it's not rejected
  * by the browser before we can even work on it
  *
  * Maximum file size is based on upload_max_filesize and total payload on post_max_size
- * With D&D post_max_size is less important since its done one at a time vs all at once,
+ * With D&D post_max_size is less important since it's done one at a time vs all at once,
  * still we set it.
  */
 function air_setlimits()
@@ -82,6 +82,9 @@ function air_setlimits()
 	// Set it
 	$modSettings['attachmentPostLimit'] = $post_max_size;
 	$modSettings['attachmentSizeLimit'] = $upload_max_filesize;
+
+	// Let 1.1.9 know there is a resizing agent
+	$modSettings['attachment_image_resize_enabled'] = 1;
 }
 
 /**
@@ -120,22 +123,20 @@ function iau_air_resize_images()
 {
 	global $modSettings;
 
-	// If its off, just return
+	// If off, just return
 	if (empty($modSettings['attachment_image_enabled']))
 	{
 		return;
 	}
 
-	// If its an api call (ulattach for an icon image for D&D dialog etc)
-	if (isset($_GET['api']))
+	// If an api call (ulattach for an icon image for D&D dialog etc.)
+	if (!isset($_GET['sa']) || $_GET['sa'] !== 'ulattach')
 	{
 		return;
 	}
 
 	// Load in the attachment errors, if there are any
 	$attach_errors = AttachmentErrorContext::context();
-
-	// Get the errors
 	if ($attach_errors->hasErrors())
 	{
 		$errors = $attach_errors->prepareErrors();
@@ -157,33 +158,26 @@ function iau_air_resize_images()
  */
 class Attachment_Image_Resize
 {
-	/**
-	 * Holds the current image size / type values
-	 *
-	 * @var array
-	 */
+	/** @var array Holds the current image size / type values */
 	protected $_size_current;
 
-	/**
-	 * Holds the WxH bounds an image must be within
-	 *
-	 * @var int[]
-	 */
+	/** @var int[] Holds the WxH bounds an image must be within */
 	protected $_size_bounds;
 
-	/**
-	 * The id of the $_SESSION attachment we are working on
-	 *
-	 * @var int
-	 */
+	/** @var string The id of the $_SESSION attachment we are working on */
 	protected $_attachID;
 
-	/**
-	 * Holds the errors we will try to work around
-	 *
-	 * @var string[]
-	 */
+	/** @var string[] Holds the errors we will try to work around */
 	protected $_resize_errors = array('file_too_big', 'attach_max_total_file_size');
+
+	/** @var int image type value for final image format */
+	protected $_new_format;
+
+	/** @var string[] image constants to file extensions */
+	protected $_valid_extensions = array(2 => '.jpg', 3 => '.png', 18 => '.webp');
+
+	/** @var string[] image constants to mime types */
+	protected $_valid_mime = array(2 => 'image/jpeg', 3 => 'image/png', 18 => 'image/webp');
 
 	/**
 	 * Looks at each attachment in $_SESSION and determines which can be worked on
@@ -200,7 +194,7 @@ class Attachment_Image_Resize
 	{
 		global $modSettings;
 
-		// Loop through all of the attachments
+		// Loop through all the attachments
 		foreach ($_SESSION['temp_attachments'] as $this->_attachID => $attachment)
 		{
 			if ($this->_attachID === 'post')
@@ -208,41 +202,37 @@ class Attachment_Image_Resize
 				continue;
 			}
 
-			// No errors for this file, lets just resize (if needed) while keeping its format
+			// No errors for this file, lets resize (if needed) while choosing the best format
 			if (empty($attachment['errors']))
 			{
-				$this->resize();
+				$this->resize(false);
+				continue;
 			}
-			// Errors associated with the file, if they are size related, lets see if we can help
-			else
+
+			// Errors associated with the file, if they are only size related, lets see if we can help
+			$other = false;
+			foreach ($attachment['errors'] as $errors)
 			{
-				$other = false;
-
-				// Look at each error and see if they are only due to file size limits
-				foreach ($attachment['errors'] as $errors)
+				if (!is_array($errors) || !in_array($errors[0], $this->_resize_errors, true))
 				{
-					if (!is_array($errors) || !in_array($errors[0], $this->_resize_errors))
-					{
-						$other = true;
-						break;
-					}
+					$other = true;
+					break;
+				}
+			}
+
+			// OK lets see if we can fix this file
+			if ($other === false)
+			{
+				// Rotation is bypassed on errors during normal Elk processing
+				// exif data may be stripped by resize operations, so do this first.
+				if (!empty($modSettings['attachment_autorotate'])
+					&& function_exists('autoRotateImage')
+					&& strpos($_SESSION['temp_attachments'][$this->_attachID]['type'], 'image') === 0)
+				{
+					autoRotateImage($_SESSION['temp_attachments'][$this->_attachID]['tmp_name']);
 				}
 
-				// OK lets see if we can fix this file
-				if ($other === false)
-				{
-					// Rotation is bypassed on errors during normal Elk processing
-					if (!empty($modSettings['attachment_autorotate']) && substr($_SESSION['temp_attachments'][$this->_attachID]['type'], 0, 5) === 'image')
-					{
-						// exif data may be stripped by resize operations, so do this first.
-						if (function_exists('autoRotateImage'))
-						{
-							autoRotateImage($_SESSION['temp_attachments'][$this->_attachID]['tmp_name']);
-						}
-					}
-
-					$this->resize(false);
-				}
+				$this->resize(true);
 			}
 		}
 	}
@@ -252,19 +242,20 @@ class Attachment_Image_Resize
 	 *
 	 * What it does:
 	 *
-	 * - Loads the current images information, most importantly its size and format
+	 * - Loads the current images' information, most importantly its size and format
 	 * - Set the WxH bounds based on settings
 	 * - Forwards to the proper resizer (same or new format)
 	 *
-	 * @param boolean $resize_only
+	 * @param bool $had_errors if the upload had size related errors or not
 	 */
-	public function resize($resize_only = true)
+	public function resize($had_errors)
 	{
 		global $modSettings;
 
 		// Fetch the details for this attachment
 		$this->_size_current = @getimagesize($_SESSION['temp_attachments'][$this->_attachID]['tmp_name']);
 
+		// Valid Images only
 		if ($this->_size_current !== false)
 		{
 			// Going to need help
@@ -274,21 +265,19 @@ class Attachment_Image_Resize
 			$this->_size_bounds[0] = empty($modSettings['attachment_image_width']) ? $this->_size_current[0] : min($this->_size_current[0], $modSettings['attachment_image_width']);
 			$this->_size_bounds[1] = empty($modSettings['attachment_image_height']) ? $this->_size_current[1] : min($this->_size_current[1], $modSettings['attachment_image_height']);
 
-			// Is a PNG -AND- we allow format changes -AND- it has no alpha channel DNA
-			$force_reformat = $this->_size_current[2] === 3
-				&& !empty($modSettings['attachment_image_reformat'])
-				&& !$this->_check_transparency();
+			$this->_new_format = $this->chooseImageFormat();
+			$change_format = $this->_new_format !== $this->_size_current[2];
 
-			// Attempt to resize (if needed), maintaining the format
-			if ($resize_only)
+			// If the file was error free, only allow for the possible compression of png / jpg image
+			// leaving others alone, like bmp, tiff, gif, etc
+			if (!$had_errors)
 			{
-				$this->air_resize(!$force_reformat);
+				// e.g. jpg -> webp or opaque png -> jpg or webp or transparent png -> webp
+				$change_format = in_array($this->_size_current[2], array(IMAGETYPE_JPEG, IMAGETYPE_PNG));
 			}
-			// Attempt to resize, change the format only if needed or forced
-			else
-			{
-				$this->air_resize_new_format($force_reformat);
-			}
+
+			// Attempt to resize (if needed), possibly changing the format
+			$this->air_resize_new_format($change_format);
 		}
 	}
 
@@ -305,44 +294,34 @@ class Attachment_Image_Resize
 	 *    - if it achieves file size limits, done
 	 *    - if not attempt to resize and change format to jpeg
 	 *
-	 * @param boolean $force_reformat if set will always convert PNG to JPG
+	 * @param boolean $change_format if we can change from the current format
 	 */
-	public function air_resize_new_format($force_reformat = false)
+	public function air_resize_new_format($change_format = false)
 	{
-		global $modSettings;
-
-		// Not over the WxH size limit and already a jpeg, nothing we can try,
-		// its broke (sure jack around with quality)
-		if (!$this->_air_validate_resize() && $this->_size_current[2] === 2)
+		// Not over the WxH size limit, and we can not change the format
+		if (!$change_format && !$this->_air_validate_resize())
 		{
 			return;
 		}
 
-		// Over the WxH size limit and already a jpeg, try resize
-		if ($this->_air_validate_resize() && $this->_size_current[2] === 2)
+		// Over the WxH size limit and can not change format, try resize
+		if (!$change_format && $this->_air_validate_resize())
 		{
 			$this->air_resize();
+			return;
 		}
-		// Not over the WxH size limit, not a jpeg, and allowed to change formats (eg png->jpg)
-		elseif (!empty($modSettings['attachment_image_reformat']) && !$this->_air_validate_resize())
+
+		// Not over the WxH size limit, and allowed to change formats (eg png->jpg)
+		if ($change_format && !$this->_air_validate_resize())
 		{
 			$this->air_resize(false);
+			return;
 		}
-		// Over the WxH size limit and allowed to reformat, two steps to try resize same
-		// format first then change format
-		elseif (!empty($modSettings['attachment_image_reformat']) && $this->_air_validate_resize())
+
+		// Over the WxH size limit and allowed to change formats
+		if ($change_format && $this->_air_validate_resize())
 		{
-			if ($force_reformat)
-			{
-				$this->air_resize(false);
-
-				return;
-			}
-
-			if (!$this->air_resize())
-			{
-				$this->air_resize(false);
-			}
+			$this->air_resize(false);
 		}
 	}
 
@@ -355,7 +334,13 @@ class Attachment_Image_Resize
 	public function air_resize($same_format = true)
 	{
 		// Let try to resize this image
-		$check = resizeImageFile($_SESSION['temp_attachments'][$this->_attachID]['tmp_name'], $_SESSION['temp_attachments'][$this->_attachID]['tmp_name'] . 'airtemp', $this->_size_bounds[0], $this->_size_bounds[1], ($same_format ? $this->_size_current[2] : 2), true);
+		$check = resizeImageFile(
+			$_SESSION['temp_attachments'][$this->_attachID]['tmp_name'],
+			$_SESSION['temp_attachments'][$this->_attachID]['tmp_name'] . 'airtemp',
+			$this->_size_bounds[0],
+			$this->_size_bounds[1],
+			$same_format ? $this->_size_current[2] : $this->_new_format,
+			true);
 
 		// If successful, replace the uploaded image with the newly created one
 		if ($check)
@@ -367,12 +352,9 @@ class Attachment_Image_Resize
 			// Reload the file size
 			$check = $this->_air_update_size();
 
-			// Change the file name and mime type if it's not a .jpg
-			if ($same_format === false && strrchr($_SESSION['temp_attachments'][$this->_attachID]['name'], '.') !== '.jpg')
-			{
-				$_SESSION['temp_attachments'][$this->_attachID]['name'] = substr($_SESSION['temp_attachments'][$this->_attachID]['name'], 0, -(strlen(strrchr($_SESSION['temp_attachments'][$this->_attachID]['name'], '.')))) . '.jpg';
-				$_SESSION['temp_attachments'][$this->_attachID]['type'] = 'image/jpeg';
-			}
+			// Change the file name and mime type as needed
+			$_SESSION['temp_attachments'][$this->_attachID]['name'] = substr($_SESSION['temp_attachments'][$this->_attachID]['name'], 0, -(strlen(strrchr($_SESSION['temp_attachments'][$this->_attachID]['name'], '.')))) . $this->_valid_extensions[$this->_new_format];
+			$_SESSION['temp_attachments'][$this->_attachID]['type'] = $this->_valid_mime[$this->_new_format];
 		}
 
 		return $check;
@@ -389,7 +371,7 @@ class Attachment_Image_Resize
 	private function _air_update_size()
 	{
 		// Get the new and old size details
-		clearstatcache($_SESSION['temp_attachments'][$this->_attachID]['tmp_name']);
+		clearstatcache(true, $_SESSION['temp_attachments'][$this->_attachID]['tmp_name']);
 		$new = filesize($_SESSION['temp_attachments'][$this->_attachID]['tmp_name']);
 
 		// Make the tracking updates
@@ -489,10 +471,10 @@ class Attachment_Image_Resize
 	/**
 	 * Checks for transparency in a PNG image
 	 *
-	 *  - Checks file header to see if its been saved with Alpha space
+	 *  - Checks file header to see if it has been saved with Alpha space
 	 *  - 8 Bit (256 color) PNG's are not handled.
-	 *  - If the alpha flag is set, will go pixel by pixel to validate if any alpha
-	 * pixels exist before returning true.
+	 *  - If the files alpha flag is set, will do detailed validation to see if any alpha
+	 * pixels actually do exist before returning true.
 	 *
 	 * @return bool
 	 */
@@ -516,41 +498,113 @@ class Attachment_Image_Resize
 	}
 
 	/**
-	 * Validate PNG transparency the Imagick way
+	 * Validate PNG transparency the Imagick way.
+	 *
+	 * - First try with channel statistics which is the fastest way
+	 * - Failing that, do pixel by pixel interrogation looking an alpha value < 1
+	 * - Do not fully depend on the file alpha flag, images are often saved with this
+	 * on but w/o any alpha pixels
 	 *
 	 * @return bool
 	 */
 	private function _check_transparency_IM()
 	{
-		$trans = false;
 		try
 		{
 			$image = new Imagick($_SESSION['temp_attachments'][$this->_attachID]['tmp_name']);
+			if ($this->_size_current[0] > 1024 || $this->_size_current[1] > 1024)
+			{
+				// Large images get scaled down to reduce processing time, this is only used to look for
+				// alpha, it is not intended to be a quality image.
+				list($thumb_w, $thumb_h) = $this->getImageScaleFactor();
+				$image->scaleImage($thumb_w, $thumb_h, true);
+			}
+		}
+		catch (\ImagickException $e)
+		{
+			return true;
+		}
+
+		// First attempt by looking at the channel statistics which is faster
+		$transparent = $this->_checkIMOpacityChannel($image);
+		if (!isset($transparent))
+		{
+			// Failing channel stats, do pixel inspection
+			$transparent = $this->_checkIMOpacityPixelInspection($image);
+		}
+
+		unset($image);
+
+		return $transparent;
+	}
+
+	/**
+	 * Attempts to use imagick getImageChannelMean to determine alpha/opacity channel statistics
+	 *
+	 * - An opaque image will have 0 standard deviation and a mean of 1 (65535)
+	 * - If failure returns null, otherwise bool
+	 *
+	 * @param \Imagick $image
+	 * @return bool|null
+	 */
+	private function _checkIMOpacityChannel($image)
+	{
+		try
+		{
+			$transparent = true;
+			$stats = $image->getImageChannelMean(imagick::CHANNEL_OPACITY);
+
+			// If mean = 65535 and std = 0, then its perfectly opaque.
+			if ((int) $stats['mean'] === 65535 && (int) $stats['standardDeviation'] === 0)
+			{
+				$transparent = false;
+			}
+		}
+		catch (\ImagickException $e)
+		{
+			$transparent = null;
+		}
+
+		return $transparent;
+	}
+
+	/**
+	 * Does pixel by pixel inspection to determine if any have an alpha value < 1
+	 *
+	 * - Any pixel alpha < 1 is not perfectly opaque.
+	 * - Resizes images > 1024x1024 to reduce pixel count
+	 *
+	 * @param \Imagick $image
+	 * @return bool
+	 */
+	private function _checkIMOpacityPixelInspection($image)
+	{
+		try
+		{
+			$transparent = false;
 			$pixel_iterator = $image->getPixelIterator();
 
-			// Look at each one, or until we find just one
-			foreach ($pixel_iterator as $y => $pixels)
+			// Look at each one, or until we find just one, or we have to give up
+			foreach ($pixel_iterator as $pixels)
 			{
-				foreach ($pixels as $x => $pixel)
+				foreach ($pixels as $pixel)
 				{
 					$color = $pixel->getColor();
-					if ($color['a'] < 1)
+					if ($color['a'] < 1.0)
 					{
-						$trans = true;
+						$transparent = true;
 						break 2;
 					}
 				}
 			}
 		}
-		catch (Exception $e)
+		catch (\ImagickPixelIteratorException $e)
 		{
-			// We don't know what it is, so don't mess with it
-			$trans = true;
+			// We don't know for sure what it is, so don't mess with it
+			$transparent = true;
 		}
 
-		unset($image);
-
-		return $trans;
+		return $transparent;
 	}
 
 	/**
@@ -560,21 +614,35 @@ class Attachment_Image_Resize
 	 */
 	private function _check_transparency_GD()
 	{
-		$trans = false;
+		$transparent = false;
 		$image = imagecreatefrompng($_SESSION['temp_attachments'][$this->_attachID]['tmp_name']);
-		if (!is_resource($image))
+		if (!$image)
 		{
 			return true;
 		}
 
-		// Go through the image pixel by pixel and as soon as we find a transparent pixel
-		for ($i = 0; $i < $this->_size_current[0]; $i++)
+		// Large images get scaled down to reduce processing time
+		if ($this->_size_current[0] > 1024 || $this->_size_current[1] > 1024)
 		{
-			for ($j = 0; $j < $this->_size_current[1]; $j++)
+			// Single pass scale down, not looking for quality here
+			list($thumb_w, $thumb_h) = $this->getImageScaleFactor();
+			$image = imagescale($image, $thumb_w, $thumb_h, IMG_NEAREST_NEIGHBOUR);
+			if (!$image)
+			{
+				return true;
+			}
+		}
+
+		// Go through the image pixel by pixel until we find any transparent pixel
+		$x = imagesx($image);
+		$y = imagesy($image);
+		for ($i = 0; $i < $x; $i++)
+		{
+			for ($j = 0; $j < $y; $j++)
 			{
 				if (imagecolorat($image, $i, $j) & 0x7F000000)
 				{
-					$trans = true;
+					$transparent = true;
 					break 2;
 				}
 			}
@@ -582,6 +650,70 @@ class Attachment_Image_Resize
 
 		unset($image);
 
-		return $trans;
+		return $transparent;
+	}
+
+	/**
+	 * Determine the WxH values to scale an image while maintaining aspect ratio
+	 *
+	 * @param int $limit the wxh clamping limit
+	 * @return array
+	 */
+	private function getImageScaleFactor($limit = 800)
+	{
+		$thumb_w = $this->_size_current[0];
+		$thumb_h = $this->_size_current[1];
+
+		if ($this->_size_current[0] > $this->_size_current[1])
+		{
+			$thumb_w = $limit;
+			$thumb_h = max (1, $this->_size_current[1] * ($limit / $this->_size_current[0]));
+		}
+		elseif ($this->_size_current[0] < $this->_size_current[1])
+		{
+			$thumb_w = max(1, $this->_size_current[0] * ($limit / $this->_size_current[1]));
+			$thumb_h = $limit;
+		}
+
+		return array((int) $thumb_w, (int) $thumb_h);
+	}
+
+	/**
+	 * Based on ACP settings and Server settings, returns the best image type for saving
+	 *
+	 * - Prefers webp if enabled and available
+	 * - w/o webp, non transparent png -> jpg
+	 * - transparent png stays as png
+	 *
+	 * @return int|mixed
+	 */
+	private function chooseImageFormat()
+	{
+		global $modSettings;
+
+		if (empty($modSettings['attachment_image_reformat']))
+		{
+			return $this->_size_current[2];
+		}
+
+		$hasWebp = function_exists('hasWebpSupport') && hasWebpSupport();
+
+		// Webp is the best choice if server supports
+		if ($hasWebp
+			&&!empty($modSettings['attachment_webp_enable'])
+			&& (empty($modSettings['attachmentCheckExtensions']) || stripos($modSettings['attachmentExtensions'], ',webp') !== false))
+		{
+			return IMAGETYPE_WEBP;
+		}
+
+		// If you have alpha channels, best keep with PNG
+		if ($this->_size_current[2] === IMAGETYPE_PNG
+			&& $this->_check_transparency())
+		{
+			return IMAGETYPE_PNG;
+		}
+
+		// The default, JPG
+		return IMAGETYPE_JPEG;
 	}
 }

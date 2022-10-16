@@ -1,9 +1,9 @@
 <?xml version="1.0"?>
 <!DOCTYPE package-info SYSTEM "http://www.elkarte.net/site/package-info">
-<package-info xmlns="http://www.elkarte.net/site/package-info" xmlns:elk="http://www.elkarte.net/">
+<package-info xmlns="https://www.elkarte.net/site/package-info" xmlns:elk="https://www.elkarte.net/">
 	<id>Spuds:air_elk</id>
 	<name>Attachment Image Resize</name>
-	<version>1.0.6</version>
+	<version>1.0.7</version>
 	<type>addon</type>
 	<license><![CDATA[
 /**
@@ -12,7 +12,7 @@
  * @author spuds
  * @license MPL 1.1 http://mozilla.org/MPL/1.1/
  *
- * @version 1.0.6
+ * @version 1.0.7
  */
 ]]></license>
 	<install for="1.0 - 1.0.99">
@@ -28,7 +28,7 @@
 		<hook hook="integrate_action_post_after" file="SUBSDIR/Air_Resize.subs.php" function="ipa_air_afterpost" />
 
 		<database>add_settings.php</database>
-		<redirect url="?action=admin;area=manageattachments;sa=attachments" timeout="4000">redirect.txt</redirect>
+		<redirect url="?action=admin;area=manageattachments;sa=attachments#attachment_image_resize" timeout="3000">redirect.txt</redirect>
 	</install>
 
 	<uninstall for="1.0 - 1.0.99">
@@ -41,7 +41,7 @@
 		<remove-file name="LANGUAGEDIR/english/air_elk.english.php" />
 		<remove-file name="LANGUAGEDIR/german/air_elk.german.php" />
 		<remove-file name="SUBSDIR/Air_Resize.subs.php" />
-		<redirect url="?action=admin;area=packages;sa=browse" timeout="4000" />
+		<redirect url="?action=admin;area=packages;sa=browse" timeout="3000" />
 	</uninstall>
 
 	<install for="1.1 - 1.1.99">
@@ -57,7 +57,7 @@
 		<hook hook="integrate_action_post_before" file="SUBSDIR/Air_Resize.subs.php" function="ipb_air_prepost" />
 		<hook hook="integrate_action_post_after" file="SUBSDIR/Air_Resize.subs.php" function="ipa_air_afterpost" />
 		<database>add_settings.php</database>
-		<redirect url="?action=admin;area=manageattachments;sa=attachments" timeout="4000">redirect.txt</redirect>
+		<redirect url="?action=admin;area=manageattachments;sa=attachments#attachment_image_resize" timeout="3000">redirect.txt</redirect>
 	</install>
 
 	<uninstall for="1.1 - 1.1.99">
@@ -71,6 +71,6 @@
 		<remove-file name="LANGUAGEDIR/german/air_elk.german.php" />
 		<remove-file name="LANGUAGEDIR/russian/air_elk.russian.php" />
 		<remove-file name="SUBSDIR/Air_Resize.subs.php" />
-		<redirect url="?action=admin;area=packages;sa=browse" timeout="4000" />
+		<redirect url="?action=admin;area=packages;sa=browse" timeout="3000" />
 	</uninstall>
 </package-info>
