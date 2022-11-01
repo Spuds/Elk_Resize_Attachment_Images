@@ -661,18 +661,16 @@ class Attachment_Image_Resize
 	 */
 	private function getImageScaleFactor($limit = 800)
 	{
-		$thumb_w = $this->_size_current[0];
-		$thumb_h = $this->_size_current[1];
+		$thumb_w = $limit;
+		$thumb_h = $limit;
 
 		if ($this->_size_current[0] > $this->_size_current[1])
 		{
-			$thumb_w = $limit;
 			$thumb_h = max (1, $this->_size_current[1] * ($limit / $this->_size_current[0]));
 		}
 		elseif ($this->_size_current[0] < $this->_size_current[1])
 		{
 			$thumb_w = max(1, $this->_size_current[0] * ($limit / $this->_size_current[1]));
-			$thumb_h = $limit;
 		}
 
 		return array((int) $thumb_w, (int) $thumb_h);
